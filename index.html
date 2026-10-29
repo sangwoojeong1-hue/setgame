@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>세트 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #00BCC8;
+    --pink: #FFAADC;
+    --yellow: #FFD600;
+    --ink: #111111;
+    --paper: #FFFFFF;
+    --good: #2E9E44;
+    --bad: #E53935;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--teal); color: var(--ink);
+    font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    font-weight: 700;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  .title-font { font-family: 'Black Han Sans', 'Noto Sans KR', sans-serif; font-weight: 400; }
+
+  .screen { display: none; height: 100dvh; min-height: 100vh; }
+  .screen.active { display: flex; }
+
+  /* 공통 버튼: 검정 테두리 + 아래 그림자로 '눌리는' 느낌 */
+  .btn {
+    border: 4px solid var(--ink); border-radius: 999px;
+    background: var(--paper); color: var(--ink); padding: 12px 24px; white-space: nowrap;
+    font-size: 20px; font-weight: 900;
+    box-shadow: 0 5px 0 var(--ink);
+    transition: transform .06s, box-shadow .06s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 60px;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+  .btn.yellow { background: var(--yellow); }
+  .btn.pink { background: var(--pink); }
+  .btn.off { background: #d9d9d9; color: #555; }
+  .btn:disabled { opacity: .45; pointer-events: none; }
+
+  /* ───── 시작 화면 ───── */
+  #start { flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; gap: 28px; overflow-y: auto; }
+  .logo-bar {
+    background: var(--ink); color: var(--yellow);
+    padding: 14px 40px; display: flex; align-items: center; gap: 18px;
+    font-size: clamp(40px, 7vw, 72px); letter-spacing: 4px;
+  }
+  .logo-bar .gem { width: 0.55em; height: 0.55em; }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: min(900px, 100%); }
+  .mode-btn {
+    border: 5px solid var(--ink); border-radius: 26px; background: var(--paper);
+    box-shadow: 0 7px 0 var(--ink);
+    display: grid; grid-template-rows: 30px auto auto 1fr; justify-items: center; align-items: center;
+    row-gap: 6px; padding: 16px 12px 20px; min-height: 230px;
+    transition: transform .06s, box-shadow .06s;
+  }
+  .mode-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .mode-btn.featured { background: var(--pink); }
+  .mode-badge { font-size: 15px; background: var(--yellow); border: 3px solid var(--ink); border-radius: 999px; padding: 1px 12px; }
+  .mode-badge.empty { visibility: hidden; }
+  .mode-name { font-size: 36px; }
+  .mode-desc { font-size: 18px; color: #333; }
+  .mode-best { align-self: end; font-size: 18px; background: var(--ink); color: var(--paper); border-radius: 999px; padding: 6px 16px; min-width: 150px; text-align: center; }
+  .tools { display: grid; grid-template-columns: repeat(3, 190px); gap: 16px; justify-content: center; }
+  .tools .btn { width: 100%; font-size: 18px; }
+
+  /* ───── 게임 화면 ───── */
+  #game { flex-direction: column; }
+  .topbar {
+    display: grid; grid-template-columns: 140px 1fr 140px; align-items: center;
+    padding: 12px 16px; gap: 12px; background: var(--ink); color: var(--paper);
+  }
+  .topbar .btn { min-height: 48px; font-size: 18px; padding: 6px 14px; box-shadow: 0 4px 0 #555; }
+  .stats { display: flex; justify-content: center; gap: 12px; }
+  .stat {
+    background: var(--paper); color: var(--ink); border-radius: 999px;
+    padding: 6px 18px; font-size: 20px; min-width: 130px; text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+  }
+  .stat .label { font-size: 15px; color: #555; }
+  .stat.time { background: var(--yellow); }
+  .stat.time.urgent { background: var(--bad); color: var(--paper); }
+  .stat.time.urgent .label { color: var(--paper); }
+  .sound-mini { justify-self: end; }
+
+  .board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 14px; }
+  .board { display: grid; gap: var(--gap, 12px); justify-content: center; align-content: center; }
+  .card {
+    position: relative; width: var(--cw); height: var(--ch);
+    background: var(--paper); border: 4px solid var(--ink); border-radius: 14px;
+    box-shadow: 0 5px 0 var(--ink); padding: 0;
+    transition: transform .08s, box-shadow .08s, background .12s;
+  }
+  .card svg { width: 100%; height: 100%; display: block; }
+  .card.selected { background: #FFF5B8; transform: translateY(-6px); box-shadow: 0 11px 0 var(--ink); outline: 5px solid var(--yellow); outline-offset: -1px; }
+  .card.hint::after {
+    content: '★'; position: absolute; top: -14px; right: -12px; width: 34px; height: 34px;
+    background: var(--pink); border: 3px solid var(--ink); border-radius: 50%;
+    font-size: 18px; line-height: 28px; text-align: center;
+  }
+  .card.hint { animation: pulse 1s ease-in-out infinite; }
+  .card.good { animation: good .38s ease-out forwards; }
+  .card.shake { animation: shake .4s; background: #FFD4D4; }
+  .card.enter { animation: enter .3s ease-out; }
+  .cb-letter {
+    position: absolute; top: 4px; left: 6px; font-size: 14px; line-height: 1;
+    background: var(--ink); color: var(--paper); border-radius: 6px; padding: 3px 5px; display: none;
+  }
+  body.cb-on .cb-letter { display: block; }
+  @keyframes good { 0% { transform: scale(1); } 40% { transform: scale(1.08); background: #C8F5CF; } 100% { transform: scale(.2); opacity: 0; } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-9px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
+  @keyframes enter { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes pulse { 50% { box-shadow: 0 5px 0 var(--ink), 0 0 0 7px var(--pink); } }
+
+  .bottombar {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px;
+    padding: 12px 16px; background: var(--paper); border-top: 4px solid var(--ink);
+  }
+  .feedback { font-size: 20px; min-height: 30px; line-height: 1.35; }
+  .feedback .ok { color: var(--good); }
+  .feedback .no { color: var(--bad); }
+  .feedback .muted { color: #666; font-weight: 500; }
+  .hint-btns { display: grid; grid-template-columns: 180px 180px; gap: 12px; }
+  .hint-btns .btn { min-height: 52px; font-size: 18px; padding: 6px 10px; }
+
+  .toast {
+    position: absolute; top: 14px; left: 50%; transform: translate(-50%, -20px);
+    background: var(--ink); color: var(--yellow); font-size: 22px;
+    padding: 10px 26px; border-radius: 999px; opacity: 0; pointer-events: none;
+    transition: opacity .2s, transform .2s; white-space: nowrap; z-index: 5;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ───── 결과 화면 ───── */
+  #result { align-items: center; justify-content: center; padding: 24px 16px; overflow-y: auto; }
+  .panel {
+    background: var(--pink); border: 5px solid var(--ink); border-radius: 30px;
+    box-shadow: 0 8px 0 var(--ink); padding: 30px 28px; width: min(620px, 100%);
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  }
+  .res-title { background: var(--ink); color: var(--yellow); font-size: 30px; padding: 8px 28px; }
+  .res-main { font-size: clamp(44px, 9vw, 64px); line-height: 1.1; }
+  .res-record { font-size: 24px; background: var(--yellow); border: 4px solid var(--ink); border-radius: 999px; padding: 6px 22px; }
+  .res-record.plain { background: var(--paper); font-size: 19px; }
+  .res-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; }
+  .res-stat { background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; padding: 10px 6px; font-size: 26px; }
+  .res-stat small { display: block; font-size: 15px; color: #555; }
+  .res-note { font-size: 19px; background: var(--paper); border-radius: 14px; padding: 10px 16px; width: 100%; }
+  .res-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-top: 6px; }
+
+  /* ───── 모달 ───── */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+  .modal.show { display: flex; }
+  .modal-box {
+    background: var(--paper); border: 5px solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 var(--ink);
+    width: min(720px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 26px 24px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .modal-box h2 { margin: 0; font-size: 30px; text-align: center; }
+  .modal-box p { margin: 0; font-size: 18px; line-height: 1.6; font-weight: 500; }
+  .modal-box b { font-weight: 900; }
+  .attr-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .attr-chip { background: #EEF9FA; border: 3px solid var(--ink); border-radius: 14px; padding: 8px 4px; text-align: center; font-size: 15px; font-weight: 500; }
+  .attr-chip b { display: block; font-size: 18px; }
+  .ex-row { display: grid; grid-template-columns: repeat(3, 1fr) 1.4fr; gap: 10px; align-items: center; }
+  .ex-row .card { width: 100%; height: auto; aspect-ratio: 3 / 2; box-shadow: 0 3px 0 var(--ink); border-width: 3px; }
+  .ex-verdict { font-size: 16px; line-height: 1.45; font-weight: 500; }
+  .ex-verdict .ok { color: var(--good); font-weight: 900; }
+  .ex-verdict .no { color: var(--bad); font-weight: 900; }
+  .modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* 좁은 화면(세로 태블릿·휴대폰) */
+  @media (max-width: 760px) {
+    .modes { grid-template-columns: 1fr; max-width: 460px; }
+    .mode-btn { min-height: 0; grid-template-rows: auto; padding: 14px; }
+    .mode-badge.empty { display: none; }
+    .mode-name { font-size: 30px; }
+    .tools { grid-template-columns: 1fr 1fr; width: min(460px, 100%); }
+    .tools #btn-rules { grid-column: 1 / -1; }
+    .tools .btn { font-size: 17px; padding: 8px 6px; }
+    .topbar { grid-template-columns: auto 1fr auto; padding: 10px; gap: 8px; }
+    .topbar .btn { font-size: 15px; padding: 4px 10px; min-height: 42px; }
+    .stats { gap: 6px; }
+    .stat { min-width: 0; padding: 5px 10px; font-size: 17px; gap: 4px; }
+    .stat .label { font-size: 12px; }
+    .bottombar { grid-template-columns: 1fr; }
+    .hint-btns { grid-template-columns: 1fr 1fr; }
+    .feedback { font-size: 17px; }
+    .attr-chips { grid-template-columns: repeat(2, 1fr); }
+    .ex-row { grid-template-columns: repeat(3, 1fr); }
+    .ex-verdict { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 줄무늬 채우기용 패턴(카드 SVG들이 공유) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs id="patterns"></defs>
+</svg>
+
+<!-- ───────── 시작 화면 ───────── -->
+<section class="screen active" id="start">
+  <div class="logo-bar title-font">
+    <svg class="gem" viewBox="0 0 20 20"><path d="M10 0 L20 10 L10 20 L0 10Z" fill="#FFAADC"/></svg>
+    <span id="app-title">세트 게임</span>
+    <svg class="gem" viewBox="0 0 20 20"><path d="M10 0 L20 10 L10 20 L0 10Z" fill="#FFAADC"/></svg>
+  </div>
+  <div class="modes" id="modes"></div>
+  <div class="tools">
+    <button class="btn yellow" id="btn-rules">? 규칙 보기</button>
+    <button class="btn" id="btn-sound"></button>
+    <button class="btn" id="btn-cb"></button>
+  </div>
+</section>
+
+<!-- ───────── 게임 화면 ───────── -->
+<section class="screen" id="game">
+  <div class="topbar">
+    <button class="btn" id="btn-quit">← 그만</button>
+    <div class="stats">
+      <div class="stat"><span class="label" id="score-label">세트</span><span id="score">0</span></div>
+      <div class="stat time" id="time-box"><span class="label">⏱</span><span id="time">0:00</span></div>
+      <div class="stat"><span class="label">남은 카드</span><span id="remain">0</span></div>
+    </div>
+    <button class="btn sound-mini" id="btn-sound-mini"></button>
+  </div>
+  <div class="board-wrap" id="board-wrap">
+    <div class="toast" id="toast"></div>
+    <div class="board" id="board"></div>
+  </div>
+  <div class="bottombar">
+    <div class="feedback" id="feedback"></div>
+    <div class="hint-btns">
+      <button class="btn pink" id="btn-hint-count">💡 세트 몇 개?</button>
+      <button class="btn pink" id="btn-hint-card">💡 1장 힌트</button>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── 결과 화면 ───────── -->
+<section class="screen" id="result">
+  <div class="panel" id="result-panel"></div>
+</section>
+
+<!-- 규칙 보기 -->
+<div class="modal" id="modal-rules">
+  <div class="modal-box">
+    <h2 class="title-font">세트란?</h2>
+    <p>카드마다 <b>네 가지 속성</b>이 있어요.</p>
+    <div class="attr-chips">
+      <div class="attr-chip"><b>색</b>빨강·초록·보라</div>
+      <div class="attr-chip"><b>모양</b>다이아·타원·물결</div>
+      <div class="attr-chip"><b>개수</b>1·2·3개</div>
+      <div class="attr-chip"><b>무늬</b>꽉 참·줄무늬·빈칸</div>
+    </div>
+    <p>카드 3장이 <b>속성마다 “셋 다 같거나, 셋 다 다르면”</b> 세트예요. 어느 속성이든 <b>2장만 같으면</b> 세트가 아니에요.</p>
+    <div class="ex-row" id="ex-good"></div>
+    <div class="ex-row" id="ex-bad"></div>
+    <p>카드 3장을 누르면 바로 판정해요. 고른 카드를 다시 누르면 선택이 풀려요. 펼친 카드에 세트가 없으면 3장이 자동으로 추가돼요.</p>
+    <div class="modal-btns">
+      <a class="btn yellow" id="btn-video" target="_blank" rel="noopener" style="text-decoration:none">▶ 영상으로 보기</a>
+      <button class="btn" id="btn-rules-close">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 그만하기 확인 -->
+<div class="modal" id="modal-quit">
+  <div class="modal-box" style="width:min(440px,100%)">
+    <h2 class="title-font">그만할까요?</h2>
+    <p style="text-align:center">지금 그만두면 이번 판은 기록되지 않아요.</p>
+    <div class="modal-btns">
+      <button class="btn" id="btn-quit-no">계속하기</button>
+      <button class="btn yellow" id="btn-quit-yes">그만하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+   설정 — 선생님이 직접 바꿔도 되는 값은 모두 여기에 모았습니다.
+   ========================================================== */
+const CONFIG = {
+  TIME_ATTACK_SECONDS: 180,     // 타임어택 제한 시간(초). 180 = 3분
+  WRONG_PENALTY: 1,             // 타임어택에서 오답 1번당 깎는 점수
+  BOARD_SIZE: 12,               // 기본으로 펼치는 카드 수
+
+  // 카드 색 3가지 (실물 세트 카드와 같은 빨강·초록·보라)
+  CARD_COLORS: ['#E53935', '#22A045', '#6A3FB5'],
+
+  // 화면 색 (대회 포스터와 같은 청록·분홍·노랑)
+  THEME: { teal: '#00BCC8', pink: '#FFAADC', yellow: '#FFD600' },
+
+  // 규칙 영상 (대회 안내 QR과 같은 영상)
+  RULE_VIDEO_URL: 'https://youtu.be/hja-BQDF45M',
+
+  APP_TITLE: '세트 게임',
+};
+
+/* 모드 정의: 순서대로 시작 화면에 놓입니다. */
+const MODES = {
+  intro:  { name: '입문',     desc: '27장 · 무늬 없이 연습', deckSize: 27, timed: false, better: 'low' },
+  deck:   { name: '덱 끝내기', desc: '81장 · 끝까지 시간 재기', deckSize: 81, timed: false, better: 'low', badge: '★ 대회 방식' },
+  attack: { name: '타임어택', desc: '', deckSize: 81, timed: true, better: 'high' },
+};
+MODES.attack.desc = `${Math.round(CONFIG.TIME_ATTACK_SECONDS / 60 * 10) / 10}분 · 오답은 −${CONFIG.WRONG_PENALTY}점`;
+
+/* 카드 속성 이름. 카드 번호(0~80)를 3진법으로 풀면 [색, 모양, 개수, 무늬]가 됩니다. */
+const ATTRS = [
+  { key: '색',   names: ['빨강', '초록', '보라'] },
+  { key: '모양', names: ['다이아', '타원', '물결'] },
+  { key: '개수', names: ['1개', '2개', '3개'] },
+  { key: '무늬', names: ['꽉 참', '줄무늬', '빈칸'] },
+];
+const CB_LETTERS = ['ㅃ', 'ㅊ', 'ㅂ'];  // 색 구분 도움: 빨강·초록·보라 머리글자
+
+/* ---------- 저장(이 기기의 브라우저에만 남음) ---------- */
+const STORE_KEY = 'setgame.v1';
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveStore() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* 비공개 창 등: 기록만 저장 안 됨 */ }
+}
+const store = Object.assign({ best: {}, sound: true, cb: false }, loadStore());
+
+/* ---------- 카드 계산 ---------- */
+function attrsOf(id) {
+  return [id % 3, Math.floor(id / 3) % 3, Math.floor(id / 9) % 3, Math.floor(id / 27) % 3];
+}
+// 세 수가 모두 같거나 모두 다르면 합이 3의 배수가 된다 (0+0+0, 0+1+2 …)
+function isSet(a, b, c) {
+  const A = attrsOf(a), B = attrsOf(b), C = attrsOf(c);
+  return A.every((v, i) => (v + B[i] + C[i]) % 3 === 0);
+}
+function findSets(cards) {
+  const out = [];
+  for (let i = 0; i < cards.length; i++)
+    for (let j = i + 1; j < cards.length; j++)
+      for (let k = j + 1; k < cards.length; k++)
+        if (isSet(cards[i], cards[j], cards[k])) out.push([cards[i], cards[j], cards[k]]);
+  return out;
+}
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/* ---------- 카드 그림(SVG) ---------- */
+// 카드는 가로 150 × 세로 100. 도형은 세로로 세워 나란히 놓는다.
+const SHAPES = [
+  'M0,-34 L15,0 L0,34 L-15,0 Z',                                                        // 다이아
+  'M-15,-19 A15,15 0 0 1 15,-19 L15,19 A15,15 0 0 1 -15,19 Z',                          // 타원
+  'M4,-34 C17,-35 17,-20 10,-10 C4,-1 15,9 15,20 C15,33 2,38 -6,34 C-17,30 -17,18 -10,10 C-4,1 -15,-9 -15,-20 C-15,-31 -6,-34 4,-34 Z', // 물결
+];
+const POSITIONS = [[75], [55, 95], [35, 75, 115]];
+
+function buildPatterns() {
+  document.getElementById('patterns').innerHTML = CONFIG.CARD_COLORS.map((c, i) =>
+    `<pattern id="stripe-${i}" width="150" height="5" patternUnits="userSpaceOnUse">
+       <rect width="150" height="5" fill="#fff"/><rect y="0" width="150" height="2" fill="${c}"/>
+     </pattern>`).join('');
+}
+// vertical=true면 세로형 카드(100×150): 도형을 눕혀 위아래로 쌓는다 (실물 카드를 세워 든 모양)
+function cardSVG(id, vertical = false) {
+  const [c, s, n, f] = attrsOf(id);
+  const color = CONFIG.CARD_COLORS[c];
+  const fill = f === 0 ? color : f === 1 ? `url(#stripe-${c})` : '#fff';
+  const shapes = POSITIONS[n].map(x => {
+    const tf = vertical ? `translate(50,${x}) rotate(90)` : `translate(${x},50)`;
+    return `<path transform="${tf}" d="${SHAPES[s]}" fill="${fill}" stroke="${color}" stroke-width="4" stroke-linejoin="round"/>`;
+  }).join('');
+  return `<svg viewBox="${vertical ? '0 0 100 150' : '0 0 150 100'}" aria-hidden="true">${shapes}</svg>`;
+}
+function cardLabel(id) {
+  const a = attrsOf(id);
+  return `${ATTRS[0].names[a[0]]} ${ATTRS[1].names[a[1]]} ${ATTRS[2].names[a[2]]} ${ATTRS[3].names[a[3]]}`;
+}
+function cardHTML(id, extraClass = '', vertical = false) {
+  return `<button class="card ${extraClass}" data-id="${id}" aria-label="${cardLabel(id)}">
+            <span class="cb-letter">${CB_LETTERS[attrsOf(id)[0]]}</span>${cardSVG(id, vertical)}</button>`;
+}
+
+/* ---------- 효과음(파일 없이 소리 합성) ---------- */
+let audioCtx = null;
+function tone(freq, start, dur, type = 'sine', vol = 0.18) {
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, audioCtx.currentTime + start);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + start + dur);
+  o.connect(g).connect(audioCtx.destination);
+  o.start(audioCtx.currentTime + start); o.stop(audioCtx.currentTime + start + dur + 0.02);
+}
+function play(kind) {
+  if (!store.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (kind === 'good') { tone(660, 0, .12); tone(990, .1, .18); }
+    else if (kind === 'bad') { tone(180, 0, .25, 'square', .08); }
+    else if (kind === 'add') { tone(520, 0, .1, 'triangle'); tone(520, .12, .1, 'triangle'); }
+    else if (kind === 'record') { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .12, .22, 'triangle')); }
+    else if (kind === 'end') { tone(784, 0, .15, 'triangle'); tone(523, .15, .3, 'triangle'); }
+  } catch (e) { /* 소리를 못 내는 환경이면 조용히 넘어감 */ }
+}
+
+/* ---------- 게임 상태 ---------- */
+let G = null;
+let timerId = null;
+
+function startGame(modeKey) {
+  const m = MODES[modeKey];
+  // 입문 덱은 무늬가 '꽉 참'(0)인 카드 = 번호 0~26
+  const deck = shuffle([...Array(m.deckSize).keys()]);
+  G = {
+    mode: modeKey, deck, board: deck.splice(0, CONFIG.BOARD_SIZE),
+    selected: [], sets: 0, wrong: 0, hints: 0, wrongAttr: [0, 0, 0, 0],
+    hintSet: null, hintShown: 0, busy: false, ended: false,
+    start: Date.now(), newIds: new Set(),
+  };
+  G.newIds = new Set(G.board);
+  showScreen('game');
+  document.getElementById('score-label').textContent = m.timed ? '점수' : '세트';
+  setFeedback('<span class="muted">세트가 되는 카드 3장을 찾아 눌러 보세요.</span>');
+  ensureSet(false);
+  render();
+  clearInterval(timerId);
+  timerId = setInterval(tick, 250);
+  tick();
+}
+
+// 펼친 카드에 세트가 없으면 3장씩 더 펼친다. 덱도 비었고 세트도 없으면 false.
+function ensureSet(announce = true) {
+  let added = false;
+  while (findSets(G.board).length === 0 && G.deck.length > 0) {
+    const more = G.deck.splice(0, 3);
+    more.forEach(id => G.newIds.add(id));
+    G.board.push(...more);
+    added = true;
+  }
+  if (added && announce) { toast('세트가 없어서 3장 추가!'); play('add'); }
+  return findSets(G.board).length > 0;
+}
+
+function score() {
+  return MODES[G.mode].timed ? G.sets - G.wrong * CONFIG.WRONG_PENALTY : G.sets;
+}
+function elapsed() { return Date.now() - G.start; }
+function fmt(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+function fmtUp(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+// 타이머는 실제 시계 기준이라, 다른 앱에 갔다 와도 시간이 그대로 흐른다.
+function tick() {
+  if (!G || G.ended) return;
+  const box = document.getElementById('time-box');
+  if (MODES[G.mode].timed) {
+    const left = CONFIG.TIME_ATTACK_SECONDS * 1000 - elapsed();
+    document.getElementById('time').textContent = fmt(left);
+    box.classList.toggle('urgent', left <= 10000);
+    if (left <= 0) endGame();
+  } else {
+    document.getElementById('time').textContent = fmtUp(elapsed());
+    box.classList.remove('urgent');
+  }
+}
+
+/* ---------- 화면 그리기 ---------- */
+let layout = { vertical: false };
+
+function render() {
+  const board = document.getElementById('board');
+  layout = computeLayout();
+  const hintIds = G.hintSet ? G.hintSet.slice(0, G.hintShown) : [];
+  board.innerHTML = G.board.map(id => {
+    const cls = [
+      G.selected.includes(id) ? 'selected' : '',
+      hintIds.includes(id) ? 'hint' : '',
+      G.newIds.has(id) ? 'enter' : '',
+    ].join(' ');
+    return cardHTML(id, cls, layout.vertical);
+  }).join('');
+  G.newIds.clear();
+  document.getElementById('score').textContent = score();
+  document.getElementById('remain').textContent = G.deck.length;
+  applyLayout();
+}
+
+// 화면에 카드가 가장 크게 보이는 배치를 고른다.
+// 후보: (3줄 × n/3칸, 3칸 × n/3줄) × (가로형 카드, 세로형 카드) → 카드 넓이가 가장 큰 것
+function computeLayout() {
+  const wrap = document.getElementById('board-wrap');
+  const W = wrap.clientWidth - 28, H = wrap.clientHeight - 28;
+  const n = G.board.length;
+  const gap = Math.max(8, Math.min(18, Math.round(Math.min(W, H) / 50)));
+  let best = null;
+  for (const [cols, rows] of [[n / 3, 3], [3, n / 3]]) {
+    for (const vertical of [false, true]) {
+      const ratio = vertical ? 2 / 3 : 3 / 2;          // 카드 가로 ÷ 세로
+      const cw = Math.floor(Math.min((W - gap * (cols - 1)) / cols, ((H - gap * (rows - 1)) / rows - 8) * ratio));
+      const ch = Math.floor(cw / ratio);
+      const area = cw * ch;
+      if (!best || area > best.area) best = { cols, rows, vertical, cw, ch, gap, area };
+    }
+  }
+  return best;
+}
+function applyLayout() {
+  const board = document.getElementById('board');
+  board.style.setProperty('--gap', layout.gap + 'px');
+  board.style.setProperty('--cw', layout.cw + 'px');
+  board.style.setProperty('--ch', layout.ch + 'px');
+  board.style.gridTemplateColumns = `repeat(${layout.cols}, ${layout.cw}px)`;
+}
+// 화면을 돌리면 다시 계산. 카드 모양(가로형/세로형)이 바뀌면 다시 그린다.
+function layoutBoard() {
+  if (!G || !document.getElementById('game').classList.contains('active')) return;
+  const next = computeLayout();
+  if (next.vertical !== layout.vertical) { render(); return; }
+  layout = next;
+  applyLayout();
+}
+
+function setFeedback(html) { document.getElementById('feedback').innerHTML = html; }
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+/* ---------- 카드 고르기와 판정 ---------- */
+function onCardTap(id) {
+  if (!G || G.busy || G.ended) return;
+  const i = G.selected.indexOf(id);
+  if (i >= 0) G.selected.splice(i, 1); else G.selected.push(id);
+  document.querySelectorAll('.card').forEach(el =>
+    el.classList.toggle('selected', G.selected.includes(+el.dataset.id)));
+  if (G.selected.length === 3) judge();
+}
+
+function judge() {
+  const [a, b, c] = G.selected;
+  const vals = [attrsOf(a), attrsOf(b), attrsOf(c)];
+  const cardEls = G.selected.map(id => document.querySelector(`.card[data-id="${id}"]`));
+  G.busy = true;
+
+  if (isSet(a, b, c)) {
+    G.sets++;
+    play('good');
+    // 맞은 이유도 짧게 보여 주어 '왜 세트인지'를 익히게 한다
+    const why = ATTRS.map((at, i) => {
+      if (G.mode === 'intro' && i === 3) return null;
+      return `${at.key} ${vals[0][i] === vals[1][i] ? '같음' : '다름'}`;
+    }).filter(Boolean).join(' · ');
+    setFeedback(`<span class="ok">✓ 세트!</span> <span class="muted">${why}</span>`);
+    cardEls.forEach(el => el && el.classList.add('good'));
+    setTimeout(() => afterSet([a, b, c]), 380);
+  } else {
+    G.wrong++;
+    play('bad');
+    const reasons = [];
+    ATTRS.forEach((at, i) => {
+      const v = vals.map(x => x[i]);
+      const allSame = v[0] === v[1] && v[1] === v[2];
+      const allDiff = new Set(v).size === 3;
+      if (!allSame && !allDiff) {
+        G.wrongAttr[i]++;
+        reasons.push(`${at.key}: ${v.map(x => at.names[x]).join('·')}`);
+      }
+    });
+    const penalty = MODES[G.mode].timed ? ` <span class="muted">(−${CONFIG.WRONG_PENALTY}점)</span>` : '';
+    setFeedback(`<span class="no">✗ ${reasons.join(' / ')} → 2개만 같아요</span>${penalty}`);
+    document.getElementById('score').textContent = score();
+    cardEls.forEach(el => el && el.classList.add('shake'));
+    setTimeout(() => {
+      G.selected = [];
+      G.busy = false;
+      cardEls.forEach(el => el && el.classList.remove('shake', 'selected'));
+    }, 450);
+  }
+}
+
+function afterSet(ids) {
+  // 12장보다 많이 펼쳐져 있거나 덱이 비었으면 빼기만, 아니면 그 자리에 새 카드
+  if (G.board.length > CONFIG.BOARD_SIZE || G.deck.length === 0) {
+    G.board = G.board.filter(id => !ids.includes(id));
+  } else {
+    G.board = G.board.map(id => {
+      if (!ids.includes(id)) return id;
+      const nid = G.deck.shift();
+      G.newIds.add(nid);
+      return nid;
+    });
+  }
+  G.selected = [];
+  G.hintSet = null; G.hintShown = 0;
+  G.busy = false;
+  const hasSet = ensureSet(true);
+  if (!hasSet) { render(); setTimeout(endGame, 500); G.busy = true; return; }
+  render();
+}
+
+/* ---------- 힌트 ---------- */
+function hintCount() {
+  if (!G || G.busy || G.ended) return;
+  G.hints++;
+  const n = findSets(G.board).length;
+  toast(`지금 세트가 ${n}개 있어요`);
+}
+function hintCard() {
+  if (!G || G.busy || G.ended) return;
+  // 같은 세트를 기준으로 누를 때마다 1장씩 더 보여 줌(최대 2장)
+  if (!G.hintSet) G.hintSet = findSets(G.board)[0];
+  if (!G.hintSet) return;
+  if (G.hintShown >= 2) { toast('남은 1장은 직접 찾아보세요!'); return; }
+  G.hints++;
+  G.hintShown++;
+  G.selected = [];
+  render();
+  setFeedback(`<span class="muted">★ 표시한 카드가 들어가는 세트가 있어요.</span>`);
+}
+
+/* ---------- 끝내기 ---------- */
+function endGame() {
+  if (!G || G.ended) return;
+  G.ended = true; G.busy = true;
+  clearInterval(timerId);
+  const m = MODES[G.mode];
+  const time = Math.min(elapsed(), m.timed ? CONFIG.TIME_ATTACK_SECONDS * 1000 : Infinity);
+  const value = m.timed ? score() : time;
+  const prev = store.best[G.mode];
+  let isRecord = false;
+  if (G.hints === 0) {
+    isRecord = prev === undefined || (m.better === 'low' ? value < prev : value > prev);
+    if (isRecord) { store.best[G.mode] = value; saveStore(); }
+  }
+  showResult({ m, time, value, prev, isRecord });
+  play(isRecord ? 'record' : 'end');
+}
+
+function bestText(modeKey, v) {
+  if (v === undefined) return '—';
+  return MODES[modeKey].timed ? `${v}점` : fmtUp(v);
+}
+
+function showResult({ m, time, value, prev, isRecord }) {
+  const main = m.timed ? `${value}점` : fmtUp(time);
+  let record;
+  if (G.hints > 0) record = `<div class="res-record plain">힌트를 써서 최고 기록에는 들어가지 않아요</div>`;
+  else if (isRecord) record = `<div class="res-record">★ 신기록! ★</div>`;
+  else record = `<div class="res-record plain">최고 기록 ${bestText(G.mode, prev)}</div>`;
+
+  let note;
+  const maxWrong = Math.max(...G.wrongAttr);
+  if (G.wrong === 0) note = '오답 0개 — 완벽해요!';
+  else {
+    const weakList = ATTRS.filter((_, i) => G.wrongAttr[i] === maxWrong).map(a => a.key);
+    if (weakList.length >= 3) {
+      note = '여러 속성에서 골고루 틀렸어요 — 색·모양·개수·무늬를 하나씩 차례로 확인해 보세요';
+    } else {
+      const weak = weakList.join('·');
+      note = `자주 틀린 속성: <b>${weak}</b> (${maxWrong}번) — 다음엔 ${weak}부터 확인해 보세요`;
+    }
+  }
+  const leftover = !m.timed && G.board.length > 0
+    ? `<div class="res-note" style="font-weight:500">남은 카드 ${G.board.length}장에는 세트가 없어서 끝났어요</div>` : '';
+
+  document.getElementById('result-panel').innerHTML = `
+    <div class="res-title title-font">${m.name} 결과</div>
+    <div class="res-main title-font">${main}</div>
+    ${record}
+    <div class="res-stats">
+      <div class="res-stat"><small>찾은 세트</small>${G.sets}</div>
+      <div class="res-stat"><small>오답</small>${G.wrong}</div>
+      <div class="res-stat"><small>힌트</small>${G.hints}</div>
+    </div>
+    <div class="res-note" style="font-weight:500">${note}</div>
+    ${leftover}
+    <div class="res-btns">
+      <button class="btn yellow" id="btn-again">다시 하기</button>
+      <button class="btn" id="btn-home">처음으로</button>
+    </div>`;
+  const mode = G.mode;
+  document.getElementById('btn-again').onclick = () => startGame(mode);
+  document.getElementById('btn-home').onclick = goHome;
+  showScreen('result');
+}
+
+/* ---------- 시작 화면 ---------- */
+function renderHome() {
+  document.getElementById('modes').innerHTML = Object.entries(MODES).map(([key, m]) => `
+    <button class="mode-btn ${m.badge ? 'featured' : ''}" data-mode="${key}">
+      <span class="mode-badge ${m.badge ? '' : 'empty'}">${m.badge || '-'}</span>
+      <span class="mode-name title-font">${m.name}</span>
+      <span class="mode-desc">${m.desc}</span>
+      <span class="mode-best">최고 ${bestText(key, store.best[key])}</span>
+    </button>`).join('');
+  document.querySelectorAll('.mode-btn').forEach(b => b.onclick = () => startGame(b.dataset.mode));
+  renderToggles();
+}
+function renderToggles() {
+  const s = document.getElementById('btn-sound'), mini = document.getElementById('btn-sound-mini');
+  s.textContent = store.sound ? '🔊 소리 켬' : '🔇 소리 끔';
+  s.classList.toggle('off', !store.sound);
+  mini.textContent = store.sound ? '🔊' : '🔇';
+  const cb = document.getElementById('btn-cb');
+  cb.textContent = store.cb ? '🎨 색 도움 켬' : '🎨 색 도움 끔';
+  cb.classList.toggle('off', !store.cb);
+  document.body.classList.toggle('cb-on', store.cb);
+}
+function goHome() {
+  clearInterval(timerId);
+  G = null;
+  renderHome();
+  showScreen('start');
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+}
+
+/* ---------- 규칙 보기 예시 ---------- */
+function idOf(c, s, n, f) { return c + s * 3 + n * 9 + f * 27; }
+function renderRuleExamples() {
+  const good = [idOf(0, 0, 0, 0), idOf(1, 1, 1, 1), idOf(2, 2, 2, 2)];
+  const bad = [idOf(0, 1, 0, 0), idOf(0, 1, 1, 0), idOf(1, 1, 2, 0)];
+  const ex = (ids, verdict) => ids.map(id => cardHTML(id)).join('') + `<div class="ex-verdict">${verdict}</div>`;
+  document.getElementById('ex-good').innerHTML = ex(good,
+    '<span class="ok">✓ 세트</span><br>색·모양·개수·무늬가 모두 셋 다 달라요');
+  document.getElementById('ex-bad').innerHTML = ex(bad,
+    '<span class="no">✗ 세트 아님</span><br>색이 빨강·빨강·초록 — 2장만 같아요');
+}
+
+/* ---------- 이벤트 연결 ---------- */
+document.getElementById('board').addEventListener('click', e => {
+  const el = e.target.closest('.card');
+  if (el) onCardTap(+el.dataset.id);
+});
+document.getElementById('btn-hint-count').onclick = hintCount;
+document.getElementById('btn-hint-card').onclick = hintCard;
+document.getElementById('btn-quit').onclick = () => document.getElementById('modal-quit').classList.add('show');
+document.getElementById('btn-quit-no').onclick = () => document.getElementById('modal-quit').classList.remove('show');
+document.getElementById('btn-quit-yes').onclick = () => {
+  document.getElementById('modal-quit').classList.remove('show');
+  goHome();
+};
+document.getElementById('btn-rules').onclick = () => document.getElementById('modal-rules').classList.add('show');
+document.getElementById('btn-rules-close').onclick = () => document.getElementById('modal-rules').classList.remove('show');
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
+  if (e.target === m && m.id === 'modal-rules') m.classList.remove('show');
+}));
+const toggleSound = () => { store.sound = !store.sound; saveStore(); renderToggles(); };
+document.getElementById('btn-sound').onclick = toggleSound;
+document.getElementById('btn-sound-mini').onclick = toggleSound;
+document.getElementById('btn-cb').onclick = () => { store.cb = !store.cb; saveStore(); renderToggles(); };
+window.addEventListener('resize', layoutBoard);
+document.addEventListener('visibilitychange', tick);
+
+/* ---------- 시작 ---------- */
+(function init() {
+  const root = document.documentElement.style;
+  root.setProperty('--teal', CONFIG.THEME.teal);
+  root.setProperty('--pink', CONFIG.THEME.pink);
+  root.setProperty('--yellow', CONFIG.THEME.yellow);
+  document.getElementById('app-title').textContent = CONFIG.APP_TITLE;
+  document.title = CONFIG.APP_TITLE;
+  document.getElementById('btn-video').href = CONFIG.RULE_VIDEO_URL;
+  buildPatterns();
+  renderRuleExamples();
+  renderHome();
+})();
+</script>
+</body>
+</html>
