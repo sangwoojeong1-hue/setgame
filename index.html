@@ -94,7 +94,70 @@
   .stat.time.urgent .label { color: var(--paper); }
   .sound-mini { justify-self: end; }
 
-  .board-wrap { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 14px; }
+  .play-area { flex: 1; min-height: 0; display: flex; }
+  .board-wrap { flex: 1; min-width: 0; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 14px; }
+
+  /* ───── 대회 모드: 팀 점수판 ───── */
+  .scoreboard {
+    display: none; width: 360px; flex-shrink: 0; flex-direction: column; gap: 10px;
+    background: var(--ink); padding: 14px; overflow-y: auto;
+  }
+  body.contest .scoreboard { display: flex; }
+  .sb-title { color: var(--yellow); font-size: 26px; text-align: center; letter-spacing: 2px; }
+  .sb-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .team {
+    flex: 1; max-height: 110px; min-height: 64px;
+    display: grid; grid-template-columns: 1fr 58px 72px 58px; align-items: center; gap: 8px;
+    background: var(--paper); border: 4px solid var(--team, #fff); border-radius: 16px; padding: 6px 8px 6px 12px;
+  }
+  .team.leader { box-shadow: 0 0 0 4px var(--yellow); }
+  .team-name { display: flex; align-items: center; gap: 8px; font-size: 20px; min-width: 0; }
+  .team-name .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--team); border: 3px solid var(--ink); flex-shrink: 0; }
+  .team-name span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team-score { font-size: 40px; text-align: center; line-height: 1; }
+  .team-score.bump { animation: bump .3s; }
+  .pm {
+    height: 52px; border: 4px solid var(--ink); border-radius: 14px; font-size: 26px; font-weight: 900;
+    box-shadow: 0 4px 0 var(--ink); transition: transform .06s, box-shadow .06s; padding: 0;
+  }
+  .pm:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  .pm.minus { background: #FFD4D4; }
+  .pm.plus { background: #C8F5CF; }
+  @keyframes bump { 50% { transform: scale(1.35); } }
+  body.contest .hint-btns { display: none; }
+
+  .contest-btn {
+    width: min(900px, 100%); border: 5px solid var(--ink); border-radius: 26px; background: var(--yellow);
+    box-shadow: 0 7px 0 var(--ink); padding: 16px; font-size: 26px;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    transition: transform .06s, box-shadow .06s;
+  }
+  .contest-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .contest-btn small { font-family: 'Noto Sans KR', sans-serif; font-size: 18px; font-weight: 700; color: #333; }
+
+  /* 대회 설정 창 */
+  .stepper { display: grid; grid-template-columns: 64px 90px 64px; justify-content: center; align-items: center; gap: 12px; }
+  .stepper .pm { background: var(--paper); }
+  .stepper-num { font-size: 44px; text-align: center; }
+  .team-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .team-input { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 8px; }
+  .team-input .dot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--ink); }
+  .team-input input {
+    font: inherit; font-size: 18px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 12px; width: 100%;
+    user-select: text; -webkit-user-select: text;
+  }
+
+  /* 대회 결과 순위 */
+  .rank-list { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .rank-row {
+    display: grid; grid-template-columns: 56px 1fr 90px; align-items: center; gap: 10px;
+    background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; padding: 8px 14px; font-size: 22px;
+  }
+  .rank-row.first { background: var(--yellow); font-size: 26px; }
+  .rank-row .rk { font-size: 26px; text-align: center; }
+  .rank-row .nm { text-align: left; display: flex; align-items: center; gap: 10px; }
+  .rank-row .nm .dot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--ink); background: var(--team); }
+  .rank-row .sc { text-align: right; font-size: 28px; }
   .board { display: grid; gap: var(--gap, 12px); justify-content: center; align-content: center; }
   .card {
     position: relative; width: var(--cw); height: var(--ch);
@@ -196,6 +259,19 @@
     .stat .label { font-size: 12px; }
     .bottombar { grid-template-columns: 1fr; }
     .hint-btns { grid-template-columns: 1fr 1fr; }
+    .team-inputs { grid-template-columns: 1fr; }
+    .contest-btn { flex-direction: column; gap: 2px; max-width: 460px; }
+  }
+  /* 세로 화면에서는 점수판을 게임판 아래로 */
+  @media (orientation: portrait) {
+    body.contest .play-area { flex-direction: column; }
+    .scoreboard { width: auto; max-height: 40%; }
+    .sb-title { display: none; }
+    .sb-list { display: grid; grid-template-columns: 1fr 1fr; }
+    .team { max-height: none; grid-template-columns: 1fr 48px 52px 48px; gap: 6px; }
+    .team-score { font-size: 32px; }
+    .pm { height: 46px; font-size: 22px; }
+    .team-name { font-size: 17px; }
     .feedback { font-size: 17px; }
     .attr-chips { grid-template-columns: repeat(2, 1fr); }
     .ex-row { grid-template-columns: repeat(3, 1fr); }
@@ -218,6 +294,7 @@
     <svg class="gem" viewBox="0 0 20 20"><path d="M10 0 L20 10 L10 20 L0 10Z" fill="#FFAADC"/></svg>
   </div>
   <div class="modes" id="modes"></div>
+  <button class="contest-btn title-font" id="btn-contest">🏆 대회 모드 <small>81장 · 팀 점수판 · 교실 화면용</small></button>
   <div class="tools">
     <button class="btn yellow" id="btn-rules">? 규칙 보기</button>
     <button class="btn" id="btn-sound"></button>
@@ -236,9 +313,15 @@
     </div>
     <button class="btn sound-mini" id="btn-sound-mini"></button>
   </div>
-  <div class="board-wrap" id="board-wrap">
-    <div class="toast" id="toast"></div>
-    <div class="board" id="board"></div>
+  <div class="play-area">
+    <div class="board-wrap" id="board-wrap">
+      <div class="toast" id="toast"></div>
+      <div class="board" id="board"></div>
+    </div>
+    <aside class="scoreboard" id="scoreboard">
+      <div class="sb-title title-font">팀 점수</div>
+      <div class="sb-list" id="sb-list"></div>
+    </aside>
   </div>
   <div class="bottombar">
     <div class="feedback" id="feedback"></div>
@@ -279,11 +362,30 @@
 <!-- 그만하기 확인 -->
 <div class="modal" id="modal-quit">
   <div class="modal-box" style="width:min(440px,100%)">
-    <h2 class="title-font">그만할까요?</h2>
-    <p style="text-align:center">지금 그만두면 이번 판은 기록되지 않아요.</p>
+    <h2 class="title-font" id="quit-title">그만할까요?</h2>
+    <p style="text-align:center" id="quit-text">지금 그만두면 이번 판은 기록되지 않아요.</p>
     <div class="modal-btns">
       <button class="btn" id="btn-quit-no">계속하기</button>
       <button class="btn yellow" id="btn-quit-yes">그만하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 대회 설정 -->
+<div class="modal" id="modal-contest">
+  <div class="modal-box" style="width:min(620px,100%)">
+    <h2 class="title-font">🏆 대회 설정</h2>
+    <p style="text-align:center">참가 팀 수</p>
+    <div class="stepper">
+      <button class="pm" id="team-minus" aria-label="팀 줄이기">−</button>
+      <div class="stepper-num title-font" id="team-count">4</div>
+      <button class="pm" id="team-plus" aria-label="팀 늘리기">＋</button>
+    </div>
+    <p style="text-align:center">팀 이름 (비워 두면 “1팀, 2팀…”)</p>
+    <div class="team-inputs" id="team-inputs"></div>
+    <div class="modal-btns">
+      <button class="btn" id="btn-contest-cancel">취소</button>
+      <button class="btn yellow" id="btn-contest-start">대회 시작</button>
     </div>
   </div>
 </div>
@@ -307,6 +409,12 @@ const CONFIG = {
   RULE_VIDEO_URL: 'https://youtu.be/hja-BQDF45M',
 
   APP_TITLE: '세트 게임',
+
+  // 대회 모드
+  CONTEST_DEFAULT_TEAMS: 4,     // 처음 열었을 때 팀 수
+  CONTEST_MAX_TEAMS: 8,         // 최대 팀 수
+  CONTEST_POINT: 1,             // +/− 버튼 한 번에 오르내리는 점수
+  TEAM_COLORS: ['#FF6F61', '#FFC93C', '#4CC26B', '#3D9BE9', '#A66DD4', '#FF9A3C', '#2EC4B6', '#F062A8'],
 };
 
 /* 모드 정의: 순서대로 시작 화면에 놓입니다. */
@@ -314,6 +422,8 @@ const MODES = {
   intro:  { name: '입문',     desc: '27장 · 무늬 없이 연습', deckSize: 27, timed: false, better: 'low' },
   deck:   { name: '덱 끝내기', desc: '81장 · 끝까지 시간 재기', deckSize: 81, timed: false, better: 'low', badge: '★ 대회 방식' },
   attack: { name: '타임어택', desc: '', deckSize: 81, timed: true, better: 'high' },
+  // 대회 모드는 위 3개와 따로, 시작 화면 아래의 넓은 버튼으로 연다
+  contest: { name: '대회', desc: '', deckSize: 81, timed: false, contest: true },
 };
 MODES.attack.desc = `${Math.round(CONFIG.TIME_ATTACK_SECONDS / 60 * 10) / 10}분 · 오답은 −${CONFIG.WRONG_PENALTY}점`;
 
@@ -334,7 +444,7 @@ function loadStore() {
 function saveStore() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* 비공개 창 등: 기록만 저장 안 됨 */ }
 }
-const store = Object.assign({ best: {}, sound: true, cb: false }, loadStore());
+const store = Object.assign({ best: {}, sound: true, cb: false, teamNames: [], teamCount: 0 }, loadStore());
 
 /* ---------- 카드 계산 ---------- */
 function attrsOf(id) {
@@ -423,7 +533,7 @@ function play(kind) {
 let G = null;
 let timerId = null;
 
-function startGame(modeKey) {
+function startGame(modeKey, teamNames = []) {
   const m = MODES[modeKey];
   // 입문 덱은 무늬가 '꽉 참'(0)인 카드 = 번호 0~26
   const deck = shuffle([...Array(m.deckSize).keys()]);
@@ -432,11 +542,18 @@ function startGame(modeKey) {
     selected: [], sets: 0, wrong: 0, hints: 0, wrongAttr: [0, 0, 0, 0],
     hintSet: null, hintShown: 0, busy: false, ended: false,
     start: Date.now(), newIds: new Set(),
+    teams: teamNames.map((name, i) => ({ name, score: 0, color: CONFIG.TEAM_COLORS[i % CONFIG.TEAM_COLORS.length] })),
   };
   G.newIds = new Set(G.board);
+  // 대회 모드: 점수판을 켜고, 힌트 버튼은 숨긴다(CSS의 body.contest)
+  document.body.classList.toggle('contest', !!m.contest);
+  document.getElementById('btn-quit').textContent = m.contest ? '← 끝내기' : '← 그만';
   showScreen('game');
+  if (m.contest) renderScoreboard();
   document.getElementById('score-label').textContent = m.timed ? '점수' : '세트';
-  setFeedback('<span class="muted">세트가 되는 카드 3장을 찾아 눌러 보세요.</span>');
+  setFeedback(m.contest
+    ? '<span class="muted">손 든 팀이 나와서 카드 3장을 눌러 주세요.</span>'
+    : '<span class="muted">세트가 되는 카드 3장을 찾아 눌러 보세요.</span>');
   ensureSet(false);
   render();
   clearInterval(timerId);
@@ -575,7 +692,8 @@ function judge() {
       if (G.mode === 'intro' && i === 3) return null;
       return `${at.key} ${vals[0][i] === vals[1][i] ? '같음' : '다름'}`;
     }).filter(Boolean).join(' · ');
-    setFeedback(`<span class="ok">✓ 세트!</span> <span class="muted">${why}</span>`);
+    const contestTip = MODES[G.mode].contest ? ' → 찾은 팀에 <b>＋</b>' : '';
+    setFeedback(`<span class="ok">✓ 세트!${contestTip}</span> <span class="muted">${why}</span>`);
     cardEls.forEach(el => el && el.classList.add('good'));
     setTimeout(() => afterSet([a, b, c]), 380);
   } else {
@@ -591,7 +709,8 @@ function judge() {
         reasons.push(`${at.key}: ${v.map(x => at.names[x]).join('·')}`);
       }
     });
-    const penalty = MODES[G.mode].timed ? ` <span class="muted">(−${CONFIG.WRONG_PENALTY}점)</span>` : '';
+    const penalty = MODES[G.mode].timed ? ` <span class="muted">(−${CONFIG.WRONG_PENALTY}점)</span>`
+      : MODES[G.mode].contest ? ' <span class="no">→ 고른 팀에 <b>−</b></span>' : '';
     setFeedback(`<span class="no">✗ ${reasons.join(' / ')} → 2개만 같아요</span>${penalty}`);
     document.getElementById('score').textContent = score();
     cardEls.forEach(el => el && el.classList.add('shake'));
@@ -643,12 +762,99 @@ function hintCard() {
   setFeedback(`<span class="muted">★ 표시한 카드가 들어가는 세트가 있어요.</span>`);
 }
 
+/* ---------- 대회 모드: 팀 점수판 ---------- */
+// 1등(동점 포함) 팀에 노란 테두리. 모두 0점이면 표시하지 않음.
+function renderScoreboard() {
+  const top = Math.max(...G.teams.map(t => t.score));
+  const anyScore = G.teams.some(t => t.score !== 0);
+  document.getElementById('sb-list').innerHTML = G.teams.map((t, i) => `
+    <div class="team ${anyScore && t.score === top ? 'leader' : ''}" style="--team:${t.color}">
+      <div class="team-name"><span class="dot"></span><span>${escapeHTML(t.name)}</span></div>
+      <button class="pm minus" data-team="${i}" data-d="-1" aria-label="${escapeHTML(t.name)} 감점">−</button>
+      <div class="team-score title-font" id="ts-${i}">${t.score}</div>
+      <button class="pm plus" data-team="${i}" data-d="1" aria-label="${escapeHTML(t.name)} 득점">＋</button>
+    </div>`).join('');
+}
+function changeTeamScore(i, d) {
+  if (!G || G.ended) return;
+  G.teams[i].score += d * CONFIG.CONTEST_POINT;
+  play(d > 0 ? 'good' : 'bad');
+  renderScoreboard();
+  const el = document.getElementById(`ts-${i}`);
+  el.classList.add('bump');
+}
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* 대회 설정 창 */
+let setupCount = 0;
+function openContestSetup() {
+  setupCount = store.teamCount || CONFIG.CONTEST_DEFAULT_TEAMS;
+  renderTeamInputs();
+  document.getElementById('modal-contest').classList.add('show');
+}
+function renderTeamInputs() {
+  // 지금 입력해 둔 이름은 팀 수를 바꿔도 지워지지 않게 먼저 모아 둔다
+  document.querySelectorAll('#team-inputs input').forEach((inp, i) => { store.teamNames[i] = inp.value.trim(); });
+  document.getElementById('team-count').textContent = setupCount;
+  document.getElementById('team-minus').disabled = setupCount <= 2;
+  document.getElementById('team-plus').disabled = setupCount >= CONFIG.CONTEST_MAX_TEAMS;
+  let html = '';
+  for (let i = 0; i < setupCount; i++) {
+    html += `<label class="team-input">
+      <span class="dot" style="background:${CONFIG.TEAM_COLORS[i % CONFIG.TEAM_COLORS.length]}"></span>
+      <input type="text" maxlength="10" placeholder="${i + 1}팀" value="${escapeHTML(store.teamNames[i] || '')}">
+    </label>`;
+  }
+  document.getElementById('team-inputs').innerHTML = html;
+}
+function startContest() {
+  const inputs = [...document.querySelectorAll('#team-inputs input')];
+  const names = inputs.map((inp, i) => inp.value.trim() || `${i + 1}팀`);
+  inputs.forEach((inp, i) => { store.teamNames[i] = inp.value.trim(); });
+  store.teamCount = setupCount;
+  saveStore();
+  document.getElementById('modal-contest').classList.remove('show');
+  startGame('contest', names);
+}
+
+function showContestResult() {
+  const time = elapsed();
+  // 점수 높은 순. 동점이면 같은 순위
+  const sorted = G.teams.map(t => ({ ...t })).sort((a, b) => b.score - a.score);
+  let rank = 0, prevScore = null;
+  const rows = sorted.map((t, idx) => {
+    if (t.score !== prevScore) { rank = idx + 1; prevScore = t.score; }
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}위`;
+    return `<div class="rank-row ${rank === 1 ? 'first' : ''}">
+      <span class="rk">${medal}</span>
+      <span class="nm"><span class="dot" style="--team:${t.color}"></span>${escapeHTML(t.name)}</span>
+      <span class="sc title-font">${t.score}점</span>
+    </div>`;
+  }).join('');
+  const winners = sorted.filter(t => t.score === sorted[0].score).map(t => escapeHTML(t.name)).join(', ');
+  document.getElementById('result-panel').innerHTML = `
+    <div class="res-title title-font">🏆 대회 결과</div>
+    <div class="res-main title-font" style="font-size:clamp(34px,7vw,52px)">${winners} 우승!</div>
+    <div class="rank-list">${rows}</div>
+    <div class="res-note" style="font-weight:500">찾은 세트 ${G.sets}개 · 걸린 시간 ${fmtUp(time)}${G.deck.length === 0 && G.board.length ? ` · 남은 ${G.board.length}장에는 세트 없음` : ''}</div>
+    <div class="res-btns">
+      <button class="btn yellow" id="btn-again">새 대회</button>
+      <button class="btn" id="btn-home">처음으로</button>
+    </div>`;
+  document.getElementById('btn-again').onclick = () => { showScreen('start'); openContestSetup(); };
+  document.getElementById('btn-home').onclick = goHome;
+  showScreen('result');
+}
+
 /* ---------- 끝내기 ---------- */
 function endGame() {
   if (!G || G.ended) return;
   G.ended = true; G.busy = true;
   clearInterval(timerId);
   const m = MODES[G.mode];
+  if (m.contest) { showContestResult(); play('record'); return; }
   const time = Math.min(elapsed(), m.timed ? CONFIG.TIME_ATTACK_SECONDS * 1000 : Infinity);
   const value = m.timed ? score() : time;
   const prev = store.best[G.mode];
@@ -711,7 +917,7 @@ function showResult({ m, time, value, prev, isRecord }) {
 
 /* ---------- 시작 화면 ---------- */
 function renderHome() {
-  document.getElementById('modes').innerHTML = Object.entries(MODES).map(([key, m]) => `
+  document.getElementById('modes').innerHTML = Object.entries(MODES).filter(([, m]) => !m.contest).map(([key, m]) => `
     <button class="mode-btn ${m.badge ? 'featured' : ''}" data-mode="${key}">
       <span class="mode-badge ${m.badge ? '' : 'empty'}">${m.badge || '-'}</span>
       <span class="mode-name title-font">${m.name}</span>
@@ -734,6 +940,7 @@ function renderToggles() {
 function goHome() {
   clearInterval(timerId);
   G = null;
+  document.body.classList.remove('contest');
   renderHome();
   showScreen('start');
 }
@@ -760,12 +967,35 @@ document.getElementById('board').addEventListener('click', e => {
 });
 document.getElementById('btn-hint-count').onclick = hintCount;
 document.getElementById('btn-hint-card').onclick = hintCard;
-document.getElementById('btn-quit').onclick = () => document.getElementById('modal-quit').classList.add('show');
+document.getElementById('btn-quit').onclick = () => {
+  // 대회 모드는 '끝내기' = 지금 점수로 순위 발표, 연습 모드는 '그만' = 기록 없이 나가기
+  const contest = G && MODES[G.mode].contest;
+  document.getElementById('quit-title').textContent = contest ? '대회를 끝낼까요?' : '그만할까요?';
+  document.getElementById('quit-text').textContent = contest
+    ? '지금까지의 점수로 순위를 발표해요.' : '지금 그만두면 이번 판은 기록되지 않아요.';
+  document.getElementById('btn-quit-yes').textContent = contest ? '끝내고 순위 보기' : '그만하기';
+  document.getElementById('modal-quit').classList.add('show');
+};
 document.getElementById('btn-quit-no').onclick = () => document.getElementById('modal-quit').classList.remove('show');
 document.getElementById('btn-quit-yes').onclick = () => {
   document.getElementById('modal-quit').classList.remove('show');
-  goHome();
+  if (G && MODES[G.mode].contest) endGame(); else goHome();
 };
+
+// 대회 모드
+document.getElementById('btn-contest').onclick = openContestSetup;
+document.getElementById('team-minus').onclick = () => { if (setupCount > 2) { setupCount--; renderTeamInputs(); } };
+document.getElementById('team-plus').onclick = () => { if (setupCount < CONFIG.CONTEST_MAX_TEAMS) { setupCount++; renderTeamInputs(); } };
+document.getElementById('btn-contest-cancel').onclick = () => document.getElementById('modal-contest').classList.remove('show');
+document.getElementById('btn-contest-start').onclick = startContest;
+document.getElementById('sb-list').addEventListener('click', e => {
+  const b = e.target.closest('.pm');
+  if (b) changeTeamScore(+b.dataset.team, +b.dataset.d);
+});
+// 대회 중 실수로 새로고침·창 닫기를 하면 점수가 날아가므로 한 번 묻는다
+window.addEventListener('beforeunload', e => {
+  if (G && MODES[G.mode].contest && !G.ended) { e.preventDefault(); e.returnValue = ''; }
+});
 document.getElementById('btn-rules').onclick = () => document.getElementById('modal-rules').classList.add('show');
 document.getElementById('btn-rules-close').onclick = () => document.getElementById('modal-rules').classList.remove('show');
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
